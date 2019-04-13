@@ -212,7 +212,7 @@ let add store name =
 let connect () =
   connect () >>= fun store ->
   Deferred.List.iter ~f:(add store) Internal.file_list 
-  >|= fun () ->
+  >>| fun () ->
   store
 " days ps
 
