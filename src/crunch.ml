@@ -146,11 +146,13 @@ let read name =
   | None   -> None
   | Some c -> Some (String.concat \"\" c)"
 
-let output_lwt_skeleton_ml oc =
+let output_skeleton_ml oc io =
   let (days, ps) =
     Ptime.Span.to_d_ps @@
     Ptime.to_span (match Ptime.of_float_s (now ()) with None -> assert false | Some x -> x)
   in
+  match io with 
+  | `Lwt -> 
   fprintf oc "
 open Lwt
 
@@ -181,8 +183,48 @@ let connect () =
   Lwt_list.iter_s (add store) Internal.file_list >|= fun () ->
   store
 " days ps
+  | `Async -> 
+  fprintf oc "
+open Async
+
+module C = struct
+  type 'a io = 'a Deferred.t
+  type t = unit
+  let disconnect () = Deferred.unit
+  let now_d_ps () = (%d, %LdL)
+  let current_tz_offset_s () = None
+  let period_d_ps () = None
+end
+
+include Mirage_kv_mem.Make(C)
+
+let file_content name =
+  match Internal.file_chunks name with
+    | None -> failwith (\"expected file content, found no blocks \" ^ name)
+    | Some blocks -> return (String.concat \"\" blocks)
+
+let add store name =
+  file_content name >>= fun data ->
+  set store (Mirage_kv.Key.v name) data >>= function
+    | Ok () -> Deferred.unit
+    | Error e -> failwith (Fmt.to_to_string pp_write_error e)
+
+let connect () =
+  connect () >>= fun store ->
+  Deferred.List.iter ~f:(add store) Internal.file_list 
+  >|= fun () ->
+  store
+" days ps
+
+let output_lwt_skeleton_ml   oc = output_skeleton_ml oc `Lwt
+let output_async_skeleton_ml oc = output_skeleton_ml oc `Async
 
 let output_lwt_skeleton_mli oc =
   fprintf oc "
 include Mirage_kv_lwt.RO
 val connect : unit -> t Lwt.t"
+
+let output_async_skeleton_mli oc =
+  fprintf oc "
+include Mirage_kv_async.RO
+val connect : unit -> t Deferred.t"

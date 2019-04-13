@@ -51,10 +51,12 @@ let walker output mode dirs exts =
   Crunch.output_implementation oc;
   begin match mode with
     | `Lwt   -> Crunch.output_lwt_skeleton_ml oc
+    | `Async -> Crunch.output_async_skeleton_ml oc
     | `Plain -> Crunch.output_plain_skeleton_ml oc
   end;
   close_out oc;
   match output with
+  (* CR dlobraico: Refactor *)
   | Some f when Filename.check_suffix f ".ml" && mode = `Lwt ->
     let mli = (Filename.chop_extension f) ^ ".mli" in
     Printf.printf "Generating %s\n%!" mli;
@@ -62,6 +64,14 @@ let walker output mode dirs exts =
     let oc = open_out mli in
     Crunch.output_generated_by oc binary;
     Crunch.output_lwt_skeleton_mli oc;
+    close_out oc
+  | Some f when Filename.check_suffix f ".ml" && mode = `Async ->
+    let mli = (Filename.chop_extension f) ^ ".mli" in
+    Printf.printf "Generating %s\n%!" mli;
+    Sys.chdir cwd;
+    let oc = open_out mli in
+    Crunch.output_generated_by oc binary;
+    Crunch.output_async_skeleton_mli oc;
     close_out oc
   | Some _ -> Printf.printf "Skipping generation of .mli\n%!"
   | None   -> ()
@@ -71,8 +81,8 @@ let () =
     ~doc:"Directories to recursively walk and crunch.") in
   let output = Arg.(value & opt (some string) None & info ["o";"output"] ~docv:"OUTPUT"
     ~doc:"Output file for the OCaml module.") in
-  let mode = Arg.(value & opt (enum ["lwt",`Lwt; "plain",`Plain]) `Lwt & info ["m";"mode"] ~docv:"MODE"
-    ~doc:"Interface access mode: 'lwt' or 'plain'. 'lwt' is the default.") in
+  let mode = Arg.(value & opt (enum ["lwt",`Lwt; "plain",`Plain; "async", `Async]) `Lwt & info ["m";"mode"] ~docv:"MODE"
+    ~doc:"Interface access mode: 'lwt', 'async', or 'plain'. 'lwt' is the default.") in
   let exts = Arg.(value & opt_all string [] & info ["e";"ext"] ~docv:"VALID EXTENSION"
     ~doc:"If specified, only these extensions will be included in the crunched output. If not specified, then all files will be crunched into the output module.") in
   let cmd_t = Term.(pure walker $ output $ mode $ dirs $ exts) in
