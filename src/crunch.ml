@@ -227,4 +227,4 @@ val connect : unit -> t Lwt.t"
 let output_async_skeleton_mli oc =
   fprintf oc "
 include Mirage_kv_async.RO
-val connect : unit -> t Deferred.t"
+val connect : unit -> t Async.Deferred.t"
