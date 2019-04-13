@@ -196,7 +196,7 @@ module C = struct
   let period_d_ps () = None
 end
 
-include Mirage_kv_mem.Make(C)
+include Mirage_kv_mem.Make_async(C)
 
 let file_content name =
   match Internal.file_chunks name with
