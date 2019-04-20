@@ -56,10 +56,11 @@ let walker output mode dirs exts =
   end;
   close_out oc;
   match output with
+  | None   -> ()
   | Some f ->
     match Filename.check_suffix f ".ml", mode with
     | _, `Plain | false, _ -> Printf.printf "Skipping generation of .mli\n%!"
-    | true, (`Lwt | `Async) as mode ->
+    | true, ((`Lwt | `Async) as mode) ->
       let mli = (Filename.chop_extension f) ^ ".mli" in
       Printf.printf "Generating %s\n%!" mli;
       Sys.chdir cwd;
@@ -69,7 +70,6 @@ let walker output mode dirs exts =
        | `Lwt -> Crunch.output_lwt_skeleton_mli oc
        | `Async -> Crunch.output_async_skeleton_mli oc);
       close_out oc
-  | None   -> ()
 
 let () =
   let dirs = Arg.(non_empty & pos_all dir [] & info [] ~docv:"DIRECTORIES"
