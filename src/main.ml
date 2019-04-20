@@ -56,24 +56,19 @@ let walker output mode dirs exts =
   end;
   close_out oc;
   match output with
-  (* CR dlobraico: Refactor *)
-  | Some f when Filename.check_suffix f ".ml" && mode = `Lwt ->
-    let mli = (Filename.chop_extension f) ^ ".mli" in
-    Printf.printf "Generating %s\n%!" mli;
-    Sys.chdir cwd;
-    let oc = open_out mli in
-    Crunch.output_generated_by oc binary;
-    Crunch.output_lwt_skeleton_mli oc;
-    close_out oc
-  | Some f when Filename.check_suffix f ".ml" && mode = `Async ->
-    let mli = (Filename.chop_extension f) ^ ".mli" in
-    Printf.printf "Generating %s\n%!" mli;
-    Sys.chdir cwd;
-    let oc = open_out mli in
-    Crunch.output_generated_by oc binary;
-    Crunch.output_async_skeleton_mli oc;
-    close_out oc
-  | Some _ -> Printf.printf "Skipping generation of .mli\n%!"
+  | Some f ->
+    match Filename.check_suffix f ".ml", mode with
+    | _, `Plain | false, _ -> Printf.printf "Skipping generation of .mli\n%!"
+    | true, (`Lwt | `Async) as mode ->
+      let mli = (Filename.chop_extension f) ^ ".mli" in
+      Printf.printf "Generating %s\n%!" mli;
+      Sys.chdir cwd;
+      let oc = open_out mli in
+      Crunch.output_generated_by oc binary;
+      (match mode with
+       | `Lwt -> Crunch.output_lwt_skeleton_mli oc
+       | `Async -> Crunch.output_async_skeleton_mli oc);
+      close_out oc
   | None   -> ()
 
 let () =
